@@ -50,39 +50,17 @@ fn main() {
     let rt = Runtime::new().unwrap();
     let result = rt.block_on(async {
         if let Some(files) = args.file {
-            for file in files {
-                if let Ok(file) = File::open(file) {
-                    let reader = BufReader::new(file);
-                    for line in reader.lines() {
-                        if let Ok(line) = line {
-                            if let Some((host, proxy)) = parse_line(&line) {
-                                if let Some(result) = check_host(
-                                    &host,
-                                    proxy.as_deref(),
-                                    &args.i2p_proxy,
-                                    &args.tor_proxy,
-                                )
-                                .await
-                                {
-                                    return Ok(result);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Err("No valid host found".to_string())
+            process_files(files, &args.i2p_proxy, &args.tor_proxy).await
         } else if let Some(host) = args.host {
-            check_host(
+            process_host(
                 &host,
                 args.socks5_proxy.as_deref(),
                 &args.i2p_proxy,
                 &args.tor_proxy,
             )
             .await
-            .ok_or("Failed to verify host".to_string())
         } else {
-            Err("No host or file provided.Use --help for more information.".to_string())
+            Err("No host or file provided. Use --help for more information.".to_string())
         }
     });
 
@@ -96,6 +74,41 @@ fn main() {
             std::process::exit(1);
         }
     }
+}
+
+async fn process_files(
+    files: Vec<String>,
+    i2p_proxy: &str,
+    tor_proxy: &str,
+) -> Result<String, String> {
+    for file in files {
+        if let Ok(file) = File::open(file) {
+            let reader = BufReader::new(file);
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    if let Some((host, proxy)) = parse_line(&line) {
+                        if let Some(result) =
+                            check_host(&host, proxy.as_deref(), i2p_proxy, tor_proxy).await
+                        {
+                            return Ok(result);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Err("No valid host found".to_string())
+}
+
+async fn process_host(
+    host: &str,
+    proxy: Option<&str>,
+    i2p_proxy: &str,
+    tor_proxy: &str,
+) -> Result<String, String> {
+    check_host(host, proxy, i2p_proxy, tor_proxy)
+        .await
+        .ok_or("Failed to verify host".to_string())
 }
 
 async fn check_host(
