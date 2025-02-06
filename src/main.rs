@@ -17,41 +17,18 @@
  * limitations under the License.
  */
 
-use clap::Parser;
-use log::{error, info, LevelFilter};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-mod host;
 
-use host::Host;
+use clap::Parser;
+use log::{error, info, LevelFilter};
 use tokio::runtime::Runtime;
 
-/// Client to verify server signatures using Ed25519
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    /// Enable debug logging
-    #[arg(short, long)]
-    verbose: bool,
+mod args;
+mod host;
 
-    /// I2P proxy hostname and port
-    #[arg(long, default_value = "localhost:4447")]
-    i2p_proxy: String,
-
-    /// Tor proxy hostname and port
-    #[arg(long, default_value = "localhost:9050")]
-    tor_proxy: String,
-
-    /// File containing list of hosts
-    #[arg(short, long)]
-    file: Option<Vec<String>>,
-
-    /// Hostname with optional protocol, port, and endpoint
-    host: Option<String>,
-
-    /// SOCKS5 proxy hostname and port
-    socks5_proxy: Option<String>,
-}
+use args::Args;
+use host::Host;
 
 fn main() {
     let args = Args::parse();

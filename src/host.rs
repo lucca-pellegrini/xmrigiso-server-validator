@@ -17,11 +17,14 @@
  * limitations under the License.
  */
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use curl::easy::Easy;
 use log::error;
 use openssl::pkey::PKey;
 use openssl::sign::Verifier;
-use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::args::{DEFAULT_I2P_PROXY, DEFAULT_TOR_PROXY};
 
 pub struct Host {
     pub url: String,
@@ -43,12 +46,14 @@ impl Host {
             format!("https://{}", host)
         };
 
-        let proxy = if host.ends_with(".onion") {
-            Some("localhost:9050".to_string())
+        let proxy = if let Some(p) = proxy {
+            Some(p.to_string())
+        } else if host.ends_with(".onion") {
+            Some(DEFAULT_TOR_PROXY.to_string())
         } else if host.ends_with(".i2p") {
-            Some("localhost:4447".to_string())
+            Some(DEFAULT_I2P_PROXY.to_string())
         } else {
-            proxy.map(|p| p.to_string())
+            None
         };
 
         Host {
