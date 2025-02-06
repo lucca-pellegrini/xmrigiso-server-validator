@@ -21,7 +21,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use clap::Parser;
-use log::{error, info, LevelFilter};
+use log::{debug, error, info, LevelFilter};
 use tokio::runtime::Runtime;
 
 mod args;
@@ -32,6 +32,7 @@ use host::Host;
 
 fn main() {
     let args = Args::parse();
+    debug!("Parsed arguments: {:?}", args);
 
     if args.verbose {
         env_logger::Builder::new()
@@ -44,13 +45,16 @@ fn main() {
     }
 
     let rt = Runtime::new().unwrap();
+    debug!("Created Tokio runtime");
     let result = rt.block_on(async {
         if let Some(files) = args.file {
             process_files(files).await
         } else if let Some(host) = args.host {
             process_host(&host, args.socks5_proxy.as_deref()).await
         } else {
-            Err("No host or file provided. Use --help for more information.".to_string())
+            let err_msg = "No host or file provided. Use --help for more information.".to_string();
+            debug!("Error: {}", err_msg);
+            Err(err_msg)
         }
     });
 
@@ -67,13 +71,22 @@ fn main() {
 }
 
 async fn process_files(files: Vec<String>) -> Result<String, String> {
-    for file in files {
-        let file = File::open(file).map_err(|_| "Failed to open file")?;
+    debug!("Processing files: {:?}", files);
+    for filename in files {
+        debug!("Opening file: {}", filename);
+        let file = File::open(&filename).map_err(|_| {
+            debug!("Failed to open file: {}", filename);
+            "Failed to open file"
+        })?;
         let reader = BufReader::new(file);
 
         for line in reader.lines() {
-            let line = line.map_err(|_| "Failed to read line")?;
+            let line = line.map_err(|_| {
+                debug!("Failed to read line in file: {}", filename);
+                "Failed to read line"
+            })?;
             if let Some((host, proxy)) = parse_line(&line) {
+                debug!("Parsed line into host: {}, proxy: {:?}", host, proxy);
                 let mut host = Host::new(&host, proxy.as_deref());
                 if host.check().await.is_ok() {
                     return Ok(host.url);
@@ -81,16 +94,20 @@ async fn process_files(files: Vec<String>) -> Result<String, String> {
             }
         }
     }
-    Err("No valid host found".to_string())
+    let err_msg = "No valid host found".to_string();
+    debug!("Error: {}", err_msg);
+    Err(err_msg)
 }
 
 async fn process_host(host: &str, proxy: Option<&str>) -> Result<String, String> {
+    debug!("Processing host: {}, with proxy: {:?}", host, proxy);
     let mut host = Host::new(host, proxy);
     host.check().await?;
     Ok(host.url)
 }
 
 fn parse_line(line: &str) -> Option<(String, Option<String>)> {
+    debug!("Parsing line: {}", line);
     let parts: Vec<&str> = line.split_whitespace().collect();
     match parts.len() {
         1 => Some((parts[0].to_string(), None)),
