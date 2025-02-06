@@ -71,7 +71,7 @@ impl Host {
         let mut easy = Easy::new();
         debug!("Initialized curl Easy object");
         easy.url(&self.url).unwrap();
-        easy.follow_location(true).unwrap();
+        easy.follow_location(false).unwrap();
         easy.accept_encoding("identity").unwrap();
 
         if let Some(proxy) = &self.proxy {
