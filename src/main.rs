@@ -18,13 +18,12 @@
  */
 
 use clap::Parser;
-use curl::easy::Easy;
 use log::{error, info, LevelFilter};
-use openssl::pkey::PKey;
-use openssl::sign::Verifier;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::time::{SystemTime, UNIX_EPOCH};
+mod host;
+
+use host::Host;
 use tokio::runtime::Runtime;
 
 /// Client to verify server signatures using Ed25519
@@ -112,91 +111,6 @@ async fn process_host(host: &str, proxy: Option<&str>) -> Result<String, String>
     let mut host = Host::new(host, proxy);
     host.check().await?;
     Ok(host.url)
-}
-
-struct Host {
-    url: String,
-    proxy: Option<String>,
-    checked: bool,
-    result: Option<String>,
-    last_checked: Option<u64>,
-}
-
-impl Host {
-    fn new(host: &str, proxy: Option<&str>) -> Self {
-        let url = if host.starts_with("http://") || host.starts_with("https://") {
-            host.to_string()
-        } else if host.ends_with(".onion") || host.ends_with(".i2p") {
-            host.to_string()
-        } else {
-            format!("https://{}", host)
-        };
-
-        let proxy = if host.ends_with(".onion") {
-            Some("localhost:9050".to_string())
-        } else if host.ends_with(".i2p") {
-            Some("localhost:4447".to_string())
-        } else {
-            proxy.map(|p| p.to_string())
-        };
-
-        Host {
-            url,
-            proxy,
-            checked: false,
-            result: None,
-            last_checked: None,
-        }
-    }
-
-    async fn check(&mut self) -> Result<(), String> {
-        let mut easy = Easy::new();
-        easy.url(&self.url).unwrap();
-        easy.follow_location(true).unwrap();
-        easy.accept_encoding("identity").unwrap();
-
-        if let Some(proxy) = &self.proxy {
-            easy.proxy(proxy).unwrap();
-            easy.proxy_type(curl::easy::ProxyType::Socks5Hostname)
-                .unwrap();
-        }
-
-        let mut response_data = Vec::new();
-        {
-            let mut transfer = easy.transfer();
-            transfer
-                .write_function(|data| {
-                    response_data.extend_from_slice(data);
-                    Ok(data.len())
-                })
-                .unwrap();
-            if let Err(err) = transfer.perform() {
-                error!("Failed to perform request to {}: {}", self.url, err);
-                return Err("Failed to verify host".to_string());
-            }
-        }
-
-        let public_key = include_str!("../public_key.pem");
-        let pkey = PKey::public_key_from_pem(public_key.as_bytes()).unwrap();
-        let mut verifier = Verifier::new_without_digest(&pkey).unwrap();
-
-        if verifier
-            .verify_oneshot(&response_data, &response_data)
-            .unwrap()
-        {
-            self.checked = true;
-            self.result = Some(self.url.clone());
-            self.last_checked = Some(
-                SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs(),
-            );
-            Ok(())
-        } else {
-            Err("Failed to verify host".to_string())
-        }
-    }
 }
 
 fn parse_line(line: &str) -> Option<(String, Option<String>)> {
