@@ -50,8 +50,10 @@ impl Host {
         let proxy = if let Some(p) = proxy {
             Some(p.to_string())
         } else if host.ends_with(".onion") {
+            debug!("Default TOR proxy chosen for .onion domain: {}", DEFAULT_TOR_PROXY);
             Some(DEFAULT_TOR_PROXY.to_string())
         } else if host.ends_with(".i2p") {
+            debug!("Default I2P proxy chosen for .i2p domain: {}", DEFAULT_I2P_PROXY);
             Some(DEFAULT_I2P_PROXY.to_string())
         } else {
             None
