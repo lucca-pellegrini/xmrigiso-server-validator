@@ -101,17 +101,16 @@ async fn process_files(
     tor_proxy: &str,
 ) -> Result<String, String> {
     for file in files {
-        if let Ok(file) = File::open(file) {
-            let reader = BufReader::new(file);
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    if let Some((host, proxy)) = parse_line(&line) {
-                        if let Some(result) =
-                            check_host(&host, proxy.as_deref(), i2p_proxy, tor_proxy).await
-                        {
-                            return Ok(result);
-                        }
-                    }
+        let file = File::open(file).map_err(|_| "Failed to open file")?;
+        let reader = BufReader::new(file);
+
+        for line in reader.lines() {
+            let line = line.map_err(|_| "Failed to read line")?;
+            if let Some((host, proxy)) = parse_line(&line) {
+                if let Some(result) =
+                    check_host(&host, proxy.as_deref(), i2p_proxy, tor_proxy).await
+                {
+                    return Ok(result);
                 }
             }
         }
