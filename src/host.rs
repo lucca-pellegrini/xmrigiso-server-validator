@@ -20,7 +20,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use curl::easy::Easy;
-use log::error;
+use log::{debug, error};
 use openssl::pkey::PKey;
 use openssl::sign::Verifier;
 
@@ -36,6 +36,7 @@ pub struct Host {
 
 impl Host {
     pub fn new(host: &str, proxy: Option<&str>) -> Self {
+        debug!("Creating new Host with host: {}, proxy: {:?}", host, proxy);
         let url = if host.starts_with("http://")
             || host.starts_with("https://")
             || host.ends_with(".onion")
@@ -66,15 +67,17 @@ impl Host {
     }
 
     pub async fn check(&mut self) -> Result<(), String> {
+        debug!("Starting check for host: {}", self.url);
         let mut easy = Easy::new();
+        debug!("Initialized curl Easy object");
         easy.url(&self.url).unwrap();
         easy.follow_location(true).unwrap();
         easy.accept_encoding("identity").unwrap();
 
         if let Some(proxy) = &self.proxy {
             easy.proxy(proxy).unwrap();
-            easy.proxy_type(curl::easy::ProxyType::Socks5Hostname)
-                .unwrap();
+            debug!("Setting proxy: {}", proxy);
+            easy.proxy_type(curl::easy::ProxyType::Socks5Hostname).unwrap();
         }
 
         let mut response_data = Vec::new();
@@ -86,12 +89,15 @@ impl Host {
                     Ok(data.len())
                 })
                 .unwrap();
+            debug!("Performing request to {}", self.url);
             if let Err(err) = transfer.perform() {
+                debug!("Request failed: {}", err);
                 error!("Failed to perform request to {}: {}", self.url, err);
                 return Err("Failed to verify host".to_string());
             }
         }
 
+        debug!("Request successful, verifying response");
         let public_key = include_str!("../public_key.pem");
         let pkey = PKey::public_key_from_pem(public_key.as_bytes()).unwrap();
         let mut verifier = Verifier::new_without_digest(&pkey).unwrap();
@@ -108,8 +114,10 @@ impl Host {
                     .unwrap()
                     .as_secs(),
             );
+            debug!("Verification successful for host: {}", self.url);
             Ok(())
         } else {
+            debug!("Verification failed for host: {}", self.url);
             Err("Failed to verify host".to_string())
         }
     }
