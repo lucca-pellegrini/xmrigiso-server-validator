@@ -1,0 +1,25 @@
+# Top-most EditorConfig file
+root = true
+
+# Default settings for all files
+[*]
+charset = utf-8
+end_of_line = lf
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Rust source files
+[*.rs]
+indent_style = space
+tab_width = 4
+shift_width = 4
+indent_size = 4
+max_line_length = 100
+
+# Cargo.toml files
+[Cargo.toml]
+indent_style = space
+tab_width = 4
+shift_width = 4
+indent_size = 4
+max_line_length = 100
