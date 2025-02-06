@@ -77,7 +77,8 @@ impl Host {
         if let Some(proxy) = &self.proxy {
             easy.proxy(proxy).unwrap();
             debug!("Setting proxy: {}", proxy);
-            easy.proxy_type(curl::easy::ProxyType::Socks5Hostname).unwrap();
+            easy.proxy_type(curl::easy::ProxyType::Socks5Hostname)
+                .unwrap();
         }
 
         let mut response_data = Vec::new();
@@ -94,6 +95,31 @@ impl Host {
                 debug!("Request failed: {}", err);
                 error!("Failed to perform request to {}: {}", self.url, err);
                 return Err("Failed to verify host".to_string());
+            }
+        } // End of transfer scope
+
+        let response_code = easy.response_code().unwrap();
+        debug!("Received response code: {}", response_code);
+        match response_code {
+            300..=399 => {
+                error!(
+                    "Request to {} was redirected with response code: {}",
+                    self.url, response_code
+                );
+                return Err(format!(
+                    "Request was redirected with response code: {}",
+                    response_code
+                ));
+            }
+            400..=599 => {
+                error!(
+                    "Request to {} returned error code: {}",
+                    self.url, response_code
+                );
+                return Err(format!("Request returned error code: {}", response_code));
+            }
+            _ => {
+                debug!("Request successful with response code: {}", response_code);
             }
         }
 
