@@ -119,6 +119,8 @@ async fn check_host(
 ) -> Option<String> {
     let url = if host.starts_with("http://") || host.starts_with("https://") {
         host.to_string()
+    } else if host.ends_with(".onion") || host.ends_with(".i2p") {
+        host.to_string()
     } else {
         format!("https://{}", host)
     };
