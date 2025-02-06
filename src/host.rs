@@ -33,9 +33,11 @@ pub struct Host {
 
 impl Host {
     pub fn new(host: &str, proxy: Option<&str>) -> Self {
-        let url = if host.starts_with("http://") || host.starts_with("https://") {
-            host.to_string()
-        } else if host.ends_with(".onion") || host.ends_with(".i2p") {
+        let url = if host.starts_with("http://")
+            || host.starts_with("https://")
+            || host.ends_with(".onion")
+            || host.ends_with(".i2p")
+        {
             host.to_string()
         } else {
             format!("https://{}", host)
