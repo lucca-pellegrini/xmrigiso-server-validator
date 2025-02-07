@@ -34,6 +34,13 @@ fn main() {
     let args = Args::parse();
     debug!("Parsed arguments: {:?}", args);
 
+    if args.copyright {
+        println!("xmrigiso-server-validator — Verify server signatures using Ed25519");
+        println!("Version: {}", env!("CARGO_PKG_VERSION"));
+        println!(include_str!("misc/LICENSE-boilerplate"));
+        std::process::exit(0);
+    }
+
     if args.debug {
         env_logger::Builder::new()
             .filter(None, LevelFilter::Debug)

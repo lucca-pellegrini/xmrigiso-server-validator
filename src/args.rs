@@ -39,8 +39,12 @@ pub struct Args {
     pub tor_proxy: String,
 
     /// Enable debug logging
-    #[arg(long)]
+    #[arg(short, long)]
     pub debug: bool,
+
+    /// Print copyright information
+    #[arg(short, long)]
+    pub copyright: bool,
 
     /// Hostname with optional protocol, port, and endpoint
     pub host: Option<String>,
