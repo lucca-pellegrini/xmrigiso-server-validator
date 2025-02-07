@@ -41,6 +41,11 @@ fn main() {
         std::process::exit(0);
     }
 
+    if args.license {
+        println!(include_str!("../LICENSE"));
+        std::process::exit(0);
+    }
+
     if args.debug {
         env_logger::Builder::new()
             .filter(None, LevelFilter::Debug)
