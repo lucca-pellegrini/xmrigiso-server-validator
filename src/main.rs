@@ -34,7 +34,7 @@ fn main() {
     let args = Args::parse();
     debug!("Parsed arguments: {:?}", args);
 
-    if args.verbose {
+    if args.debug {
         env_logger::Builder::new()
             .filter(None, LevelFilter::Debug)
             .init();
@@ -50,7 +50,7 @@ fn main() {
         if let Some(files) = args.file {
             process_files(files).await
         } else if let Some(host) = args.host {
-            process_host(&host, args.socks5_proxy.as_deref()).await
+            process_host(&host, args.proxy.as_deref()).await
         } else {
             let err_msg = "No host or file provided. Use --help for more information.".to_string();
             debug!("{}", err_msg);
