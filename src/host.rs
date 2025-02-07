@@ -50,10 +50,16 @@ impl Host {
         let proxy = if let Some(p) = proxy {
             Some(p.to_string())
         } else if host.ends_with(".onion") {
-            debug!("Default TOR proxy chosen for .onion domain: {}", DEFAULT_TOR_PROXY);
+            debug!(
+                "Default TOR proxy chosen for .onion domain: {}",
+                DEFAULT_TOR_PROXY
+            );
             Some(DEFAULT_TOR_PROXY.to_string())
         } else if host.ends_with(".i2p") {
-            debug!("Default I2P proxy chosen for .i2p domain: {}", DEFAULT_I2P_PROXY);
+            debug!(
+                "Default I2P proxy chosen for .i2p domain: {}",
+                DEFAULT_I2P_PROXY
+            );
             Some(DEFAULT_I2P_PROXY.to_string())
         } else {
             None
@@ -83,47 +89,8 @@ impl Host {
                 .unwrap();
         }
 
-        let mut response_data = Vec::new();
-        {
-            let mut transfer = easy.transfer();
-            transfer
-                .write_function(|data| {
-                    response_data.extend_from_slice(data);
-                    Ok(data.len())
-                })
-                .unwrap();
-            debug!("Performing request to {}", self.url);
-            if let Err(err) = transfer.perform() {
-                debug!("Request failed: {}", err);
-                error!("Failed to perform request to {}: {}", self.url, err);
-                return Err("Failed to verify host".to_string());
-            }
-        } // End of transfer scope
-
-        let response_code = easy.response_code().unwrap();
-        debug!("Received response code: {}", response_code);
-        match response_code {
-            300..=399 => {
-                error!(
-                    "Request to {} was redirected with response code: {}",
-                    self.url, response_code
-                );
-                return Err(format!(
-                    "Request was redirected with response code: {}",
-                    response_code
-                ));
-            }
-            400..=599 => {
-                error!(
-                    "Request to {} returned error code: {}",
-                    self.url, response_code
-                );
-                return Err(format!("Request returned error code: {}", response_code));
-            }
-            _ => {
-                debug!("Request successful with response code: {}", response_code);
-            }
-        }
+        let response_data = self.perform_request(&mut easy)?;
+        self.validate_response_code(easy.response_code().unwrap())?;
 
         debug!("Request successful, verifying response");
         let public_key = include_str!("../public_key.pem");
@@ -148,5 +115,52 @@ impl Host {
             debug!("Verification failed for host: {}", self.url);
             Err("Failed to verify host".to_string())
         }
+    }
+
+    fn perform_request(&self, easy: &mut Easy) -> Result<Vec<u8>, String> {
+        let mut response_data = Vec::new();
+        {
+            let mut transfer = easy.transfer();
+            transfer
+                .write_function(|data| {
+                    response_data.extend_from_slice(data);
+                    Ok(data.len())
+                })
+                .unwrap();
+            debug!("Performing request to {}", self.url);
+            if let Err(err) = transfer.perform() {
+                debug!("Request failed: {}", err);
+                error!("Failed to perform request to {}: {}", self.url, err);
+                return Err("Failed to verify host".to_string());
+            }
+        } // End of transfer scope
+        Ok(response_data)
+    }
+
+    fn validate_response_code(&self, response_code: u32) -> Result<(), String> {
+        debug!("Received response code: {}", response_code);
+        match response_code {
+            300..=399 => {
+                debug!(
+                    "Request to {} was redirected with response code: {}",
+                    self.url, response_code
+                );
+                return Err(format!(
+                    "Request was redirected with response code: {}",
+                    response_code
+                ));
+            }
+            400..=599 => {
+                debug!(
+                    "Request to {} returned error code: {}",
+                    self.url, response_code
+                );
+                return Err(format!("Request returned error code: {}", response_code));
+            }
+            _ => {
+                debug!("Request successful with response code: {}", response_code);
+            }
+        }
+        Ok(())
     }
 }
