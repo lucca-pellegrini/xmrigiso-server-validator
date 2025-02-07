@@ -20,7 +20,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use curl::easy::Easy;
-use log::{debug, error};
+use log::{debug, error, info};
 use openssl::pkey::PKey;
 use openssl::sign::Verifier;
 
@@ -75,7 +75,7 @@ impl Host {
     }
 
     pub async fn check(&mut self) -> Result<(), String> {
-        debug!("Starting check for host: {}", self.url);
+        info!("Starting check for host: {}", self.url);
         let mut easy = Easy::new();
         debug!("Initialized curl Easy object");
         easy.url(&self.url).unwrap();
@@ -109,10 +109,10 @@ impl Host {
                     .unwrap()
                     .as_secs(),
             );
-            debug!("Verification successful for host: {}", self.url);
+            info!("Verification successful for host: {}", self.url);
             Ok(())
         } else {
-            debug!("Verification failed for host: {}", self.url);
+            info!("Verification failed for host: {}", self.url);
             Err("Failed to verify host".to_string())
         }
     }
