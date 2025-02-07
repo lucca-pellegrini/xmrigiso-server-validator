@@ -46,6 +46,10 @@ pub struct Args {
     #[arg(short, long)]
     pub copyright: bool,
 
+    /// Print full license text
+    #[arg(long, hide = true)]
+    pub license: bool,
+
     /// Hostname with optional protocol, port, and endpoint
     pub host: Option<String>,
 
