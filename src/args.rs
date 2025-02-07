@@ -50,6 +50,10 @@ pub struct Args {
     #[arg(long, hide = true)]
     pub license: bool,
 
+    /// Generate shell completion script for the specified shell
+    #[arg(long, value_name = "SHELL")]
+    pub completion: Option<String>,
+
     /// Hostname with optional protocol, port, and endpoint
     pub host: Option<String>,
 
