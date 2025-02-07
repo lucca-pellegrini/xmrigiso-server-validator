@@ -17,10 +17,12 @@
  * limitations under the License.
  */
 
+use crate::Host;
 use clap::Parser;
 
 pub const DEFAULT_I2P_PROXY: &str = "127.0.0.1:4447";
 pub const DEFAULT_TOR_PROXY: &str = "127.0.0.1:9050";
+pub const DEFAULT_QUEUE_SIZE: usize = 0x10000 / std::mem::size_of::<*const Host>(); // About 64KiB
 
 /// Client to verify XMRIGISO server signatures using Ed25519
 #[derive(Parser, Debug)]
@@ -37,6 +39,10 @@ pub struct Args {
     /// Tor proxy hostname and port
     #[arg(long, default_value = DEFAULT_TOR_PROXY)]
     pub tor_proxy: String,
+
+    /// Host queue size
+    #[arg(short, long, default_value_t = DEFAULT_QUEUE_SIZE)]
+    pub queue_size: usize,
 
     /// Enable debug logging
     #[arg(short, long)]

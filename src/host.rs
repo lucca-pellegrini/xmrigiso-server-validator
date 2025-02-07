@@ -17,14 +17,12 @@
  * limitations under the License.
  */
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
+use crate::args::{DEFAULT_I2P_PROXY, DEFAULT_TOR_PROXY};
 use curl::easy::Easy;
 use log::{debug, error, info};
 use openssl::pkey::PKey;
 use openssl::sign::Verifier;
-
-use crate::args::{DEFAULT_I2P_PROXY, DEFAULT_TOR_PROXY};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct Host {
     pub url: String,
