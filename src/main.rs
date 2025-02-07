@@ -74,16 +74,16 @@ async fn process_files(files: Vec<String>) -> Result<String, String> {
     debug!("Processing files: {:?}", files);
     for filename in files {
         debug!("Opening file: {}", filename);
-        let file = File::open(&filename).map_err(|_| {
-            debug!("Failed to open file: {}", filename);
-            "Failed to open file"
+        let file = File::open(&filename).map_err(|err| {
+            error!("Failed to open file: {}", filename);
+            err.to_string()
         })?;
         let reader = BufReader::new(file);
 
         for line in reader.lines() {
-            let line = line.map_err(|_| {
-                debug!("Failed to read line in file: {}", filename);
-                "Failed to read line"
+            let line = line.map_err(|err| {
+                error!("Failed to read line in file: {}", filename);
+                err.to_string()
             })?;
             if let Some((host, proxy)) = parse_line(&line) {
                 debug!("Parsed line into host: {}, proxy: {:?}", host, proxy);
