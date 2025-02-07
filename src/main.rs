@@ -17,19 +17,17 @@
  * limitations under the License.
  */
 
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-
-use clap::{CommandFactory, Parser};
-use clap_complete::{generate, Shell};
-use log::{debug, error, info, LevelFilter};
-use tokio::runtime::Runtime;
-
 mod args;
 mod host;
 
 use args::Args;
+use clap::{CommandFactory, Parser};
+use clap_complete::{generate, Shell};
 use host::Host;
+use log::{debug, error, info, LevelFilter};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use tokio::{runtime::Runtime, sync::mpsc, task};
 
 fn main() {
     let args = Args::parse();
@@ -83,7 +81,7 @@ fn main() {
     debug!("Created Tokio runtime");
     let result = rt.block_on(async {
         if let Some(files) = args.file {
-            process_files(files).await
+            process_files(files, args.queue_size).await
         } else if let Some(host) = args.host {
             process_host(&host, args.proxy.as_deref()).await
         } else {
@@ -105,8 +103,26 @@ fn main() {
     }
 }
 
-async fn process_files(files: Vec<String>) -> Result<String, String> {
+async fn process_files(files: Vec<String>, queue_size: usize) -> Result<String, String> {
     debug!("Processing files: {:?}", files);
+
+    // Create a channel with a configurable buffer size
+    let (tx, mut rx) = mpsc::channel::<(String, Option<String>)>(queue_size);
+    debug!("Created channel for {} hosts", queue_size);
+
+    // Spawn a consumer task
+    let consumer_handle = task::spawn(async move {
+        while let Some((host, proxy)) = rx.recv().await {
+            debug!("Consuming host: {}, proxy: {:?}", host, proxy);
+            let mut host = Host::new(&host, proxy.as_deref());
+            if host.check().await.is_ok() {
+                return Ok(host.url);
+            }
+        }
+        Err("No valid host found".to_string())
+    });
+
+    // Producer logic: parse lines and send to the queue
     for filename in files {
         debug!("Opening file: {}", filename);
         let file = File::open(&filename).map_err(|err| {
@@ -122,15 +138,20 @@ async fn process_files(files: Vec<String>) -> Result<String, String> {
             })?;
             if let Some((host, proxy)) = parse_line(&line) {
                 debug!("Parsed line into host: {}, proxy: {:?}", host, proxy);
-                let mut host = Host::new(&host, proxy.as_deref());
-                if host.check().await.is_ok() {
-                    return Ok(host.url);
+                // Send the parsed host to the queue
+                if tx.send((host, proxy)).await.is_err() {
+                    error!("Failed to send host to queue");
                 }
             }
         }
     }
-    let err_msg = "No valid host found".to_string();
-    Err(err_msg)
+
+    // Explicitly drop the sender to close the channel
+    drop(tx);
+
+    // Wait for the consumer task to complete
+    debug!("Dropped sender, awaiting consumer task");
+    consumer_handle.await.unwrap()
 }
 
 async fn process_host(host: &str, proxy: Option<&str>) -> Result<String, String> {
