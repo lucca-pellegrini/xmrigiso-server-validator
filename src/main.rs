@@ -20,7 +20,8 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::{generate, Shell};
 use log::{debug, error, info, LevelFilter};
 use tokio::runtime::Runtime;
 
@@ -33,6 +34,28 @@ use host::Host;
 fn main() {
     let args = Args::parse();
     debug!("Parsed arguments: {:?}", args);
+
+    if let Some(shell) = args.completion {
+        let mut app = Args::command();
+        let shell = match shell.as_str() {
+            "bash" => Shell::Bash,
+            "zsh" => Shell::Zsh,
+            "fish" => Shell::Fish,
+            "powershell" => Shell::PowerShell,
+            "elvish" => Shell::Elvish,
+            _ => {
+                eprintln!("Unsupported shell: {}", shell);
+                std::process::exit(1);
+            }
+        };
+        generate(
+            shell,
+            &mut app,
+            "xmrigiso-server-validator",
+            &mut std::io::stdout(),
+        );
+        return;
+    }
 
     if args.copyright {
         println!("xmrigiso-server-validator — Verify server signatures using Ed25519");
