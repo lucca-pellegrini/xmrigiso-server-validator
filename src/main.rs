@@ -53,7 +53,7 @@ fn main() {
             process_host(&host, args.socks5_proxy.as_deref()).await
         } else {
             let err_msg = "No host or file provided. Use --help for more information.".to_string();
-            debug!("Error: {}", err_msg);
+            debug!("{}", err_msg);
             Err(err_msg)
         }
     });
@@ -64,7 +64,7 @@ fn main() {
             std::process::exit(0);
         }
         Err(err) => {
-            error!("Error: {}", err);
+            error!("{}", err);
             std::process::exit(1);
         }
     }
