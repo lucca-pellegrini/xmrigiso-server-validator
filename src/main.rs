@@ -95,7 +95,6 @@ async fn process_files(files: Vec<String>) -> Result<String, String> {
         }
     }
     let err_msg = "No valid host found".to_string();
-    debug!("Error: {}", err_msg);
     Err(err_msg)
 }
 
