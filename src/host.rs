@@ -19,7 +19,7 @@
 
 use crate::args::{DEFAULT_I2P_PROXY, DEFAULT_TOR_PROXY};
 use curl::easy::Easy;
-use log::{debug, error, info};
+use log::{debug, info, warn};
 use openssl::pkey::PKey;
 use openssl::sign::Verifier;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -127,8 +127,7 @@ impl Host {
                 .unwrap();
             debug!("Performing request to {}", self.url);
             if let Err(err) = transfer.perform() {
-                debug!("Request failed: {}", err);
-                error!("Failed to perform request to {}: {}", self.url, err);
+                warn!("Failed to perform request to {}: {}", self.url, err);
                 return Err("Failed to verify host".to_string());
             }
         } // End of transfer scope
