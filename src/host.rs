@@ -88,7 +88,10 @@ impl Host {
         }
 
         let response_data = self.perform_request(&mut easy)?;
-        self.validate_response_code(easy.response_code().unwrap())?;
+        match easy.response_code() {
+            Ok(code) => self.validate_response_code(code)?,
+            Err(err) => return Err(format!("Failed to get response code: {}", err)),
+        }
 
         debug!("Request successful, verifying response");
         let public_key = include_str!("../public_key.pem");
