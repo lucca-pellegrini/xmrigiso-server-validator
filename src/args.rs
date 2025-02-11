@@ -48,6 +48,10 @@ pub struct Args {
     #[arg(short, long)]
     pub debug: bool,
 
+    /// Enable detailed trace logging
+    #[arg(short, long)]
+    pub trace: bool,
+
     /// Print copyright information
     #[arg(short, long)]
     pub copyright: bool,

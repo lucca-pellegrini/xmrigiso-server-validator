@@ -19,7 +19,7 @@
 
 use crate::args::{DEFAULT_I2P_PROXY, DEFAULT_TOR_PROXY};
 use curl::easy::Easy;
-use log::{debug, info, warn};
+use log::{debug, info, trace, warn};
 use openssl::pkey::PKey;
 use openssl::sign::Verifier;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -34,7 +34,7 @@ pub struct Host {
 
 impl Host {
     pub fn new(host: &str, proxy: Option<&str>) -> Self {
-        debug!("Creating new Host with host: {}, proxy: {:?}", host, proxy);
+        trace!("Creating new Host with host: {}, proxy: {:?}", host, proxy);
         let url = if host.starts_with("http://")
             || host.starts_with("https://")
             || host.ends_with(".onion")
@@ -49,14 +49,14 @@ impl Host {
             Some(p.to_string())
         } else if host.ends_with(".onion") {
             debug!(
-                "Default TOR proxy chosen for .onion domain: {}",
-                DEFAULT_TOR_PROXY
+                "Default TOR proxy {} chosen for domain {}",
+                DEFAULT_TOR_PROXY, url
             );
             Some(DEFAULT_TOR_PROXY.to_string())
         } else if host.ends_with(".i2p") {
             debug!(
-                "Default I2P proxy chosen for .i2p domain: {}",
-                DEFAULT_I2P_PROXY
+                "Default I2P proxy {} chosen for domain {}",
+                DEFAULT_I2P_PROXY, url
             );
             Some(DEFAULT_I2P_PROXY.to_string())
         } else {
@@ -75,14 +75,14 @@ impl Host {
     pub async fn check(&mut self) -> Result<(), String> {
         info!("Starting check for host: {}", self.url);
         let mut easy = Easy::new();
-        debug!("Initialized curl Easy object");
+        trace!("Initialized curl Easy object");
         easy.url(&self.url).unwrap();
         easy.follow_location(false).unwrap();
         easy.accept_encoding("identity").unwrap();
 
         if let Some(proxy) = &self.proxy {
             easy.proxy(proxy).unwrap();
-            debug!("Setting proxy: {}", proxy);
+            trace!("Setting proxy: {}", proxy);
             easy.proxy_type(curl::easy::ProxyType::Socks5Hostname)
                 .unwrap();
         }
@@ -93,15 +93,12 @@ impl Host {
             Err(err) => return Err(format!("Failed to get response code: {}", err)),
         }
 
-        debug!("Request successful, verifying response");
+        trace!("Request successful, verifying response");
         let public_key = include_str!("../public_key.pem");
         let pkey = PKey::public_key_from_pem(public_key.as_bytes()).unwrap();
         let mut verifier = Verifier::new_without_digest(&pkey).unwrap();
 
-        if verifier
-            .verify_oneshot(&response_data, &response_data)
-            .unwrap()
-        {
+        if let Ok(true) = verifier.verify_oneshot(&response_data, &response_data) {
             self.checked = true;
             self.result = Some(self.url.clone());
             self.last_checked = Some(
@@ -128,7 +125,7 @@ impl Host {
                     Ok(data.len())
                 })
                 .unwrap();
-            debug!("Performing request to {}", self.url);
+            trace!("Performing request to {}", self.url);
             if let Err(err) = transfer.perform() {
                 warn!("Failed to perform request to {}: {}", self.url, err);
                 return Err("Failed to verify host".to_string());
@@ -138,7 +135,7 @@ impl Host {
     }
 
     fn validate_response_code(&self, response_code: u32) -> Result<(), String> {
-        debug!("Received response code: {}", response_code);
+        trace!("Received response code: {}", response_code);
         match response_code {
             300..=399 => {
                 debug!(

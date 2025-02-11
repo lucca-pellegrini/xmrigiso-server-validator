@@ -24,7 +24,7 @@ use args::Args;
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use host::Host;
-use log::{debug, error, info, LevelFilter};
+use log::{debug, error, info, trace, LevelFilter};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use tokio::{runtime::Runtime, sync::mpsc, task};
@@ -67,7 +67,11 @@ fn main() {
         std::process::exit(0);
     }
 
-    if args.debug {
+    if args.trace {
+        env_logger::Builder::new()
+            .filter(None, LevelFilter::Trace)
+            .init();
+    } else if args.debug {
         env_logger::Builder::new()
             .filter(None, LevelFilter::Debug)
             .init();
@@ -78,16 +82,14 @@ fn main() {
     }
 
     let rt = Runtime::new().unwrap();
-    debug!("Created Tokio runtime");
+    trace!("Created Tokio runtime");
     let result = rt.block_on(async {
         if let Some(files) = args.file {
             process_files(files, args.queue_size).await
         } else if let Some(host) = args.host {
             process_host(&host, args.proxy.as_deref()).await
         } else {
-            let err_msg = "No host or file provided. Use --help for more information.".to_string();
-            debug!("{}", err_msg);
-            Err(err_msg)
+            Err("No host or file provided. Use --help for more information.".to_string())
         }
     });
 
@@ -113,7 +115,7 @@ async fn process_files(files: Vec<String>, queue_size: usize) -> Result<String, 
     // Spawn a consumer task
     let consumer_handle = task::spawn(async move {
         while let Some((host, proxy)) = rx.recv().await {
-            debug!("Consuming host: {}, proxy: {:?}", host, proxy);
+            trace!("Consuming host: {}, proxy: {:?}", host, proxy);
             let mut host = Host::new(&host, proxy.as_deref());
             if host.check().await.is_ok() {
                 return Ok(host.url);
@@ -124,7 +126,7 @@ async fn process_files(files: Vec<String>, queue_size: usize) -> Result<String, 
 
     // Producer logic: parse lines and send to the queue
     for filename in files {
-        debug!("Opening file: {}", filename);
+        trace!("Opening file: {}", filename);
         let file = File::open(&filename).map_err(|err| {
             error!("Failed to open file: {}", filename);
             err.to_string()
@@ -137,7 +139,7 @@ async fn process_files(files: Vec<String>, queue_size: usize) -> Result<String, 
                 err.to_string()
             })?;
             if let Some((host, proxy)) = parse_line(&line) {
-                debug!("Parsed line into host: {}, proxy: {:?}", host, proxy);
+                trace!("Parsed line into host: {}, proxy: {:?}", host, proxy);
                 // Send the parsed host to the queue
                 if tx.send((host, proxy)).await.is_err() {
                     error!("Failed to send host to queue");
@@ -155,14 +157,14 @@ async fn process_files(files: Vec<String>, queue_size: usize) -> Result<String, 
 }
 
 async fn process_host(host: &str, proxy: Option<&str>) -> Result<String, String> {
-    debug!("Processing host: {}, with proxy: {:?}", host, proxy);
+    trace!("Processing host: {}, with proxy: {:?}", host, proxy);
     let mut host = Host::new(host, proxy);
     host.check().await?;
     Ok(host.url)
 }
 
 fn parse_line(line: &str) -> Option<(String, Option<String>)> {
-    debug!("Parsing line: {}", line);
+    trace!("Parsing line: {}", line);
     let parts: Vec<&str> = line.split_whitespace().collect();
     match parts.len() {
         1 => Some((parts[0].to_string(), None)),
