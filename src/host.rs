@@ -132,8 +132,8 @@ impl Host {
             info!("Verification successful for host: {}", self.url);
             Ok(())
         } else {
-            info!("Verification failed for host: {}", self.url);
-            Err("Failed to verify host".to_string())
+            warn!("Signature invalid for host: {}", self.url);
+            Err("Signature invalid".to_string())
         }
     }
 
