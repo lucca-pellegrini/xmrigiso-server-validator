@@ -20,9 +20,13 @@
 use crate::args::{DEFAULT_I2P_PROXY, DEFAULT_TOR_PROXY};
 use curl::easy::Easy;
 use log::{debug, info, trace, warn};
-use openssl::pkey::PKey;
+use openssl::rand::rand_bytes;
 use openssl::sign::Verifier;
+use openssl::{base64, pkey::PKey};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+const DATA_SIZE: usize = 128; // Size of data to be signed
+const SIG_SIZE: usize = 64; // Ed25519 signature size
 
 pub struct Host {
     pub url: String,
@@ -87,18 +91,39 @@ impl Host {
                 .unwrap();
         }
 
-        let response_data = self.perform_request(&mut easy)?;
+        let mut random_data = vec![0u8; DATA_SIZE];
+        rand_bytes(&mut random_data).unwrap();
+        trace!(
+            "Generated random bytes: {:?}",
+            base64::encode_block(&random_data)
+        );
+
+        let response_data = self.perform_request(&mut easy, &random_data)?;
         match easy.response_code() {
             Ok(code) => self.validate_response_code(code)?,
             Err(err) => return Err(format!("Failed to get response code: {}", err)),
         }
 
-        trace!("Request successful, verifying response");
+        // Check if the response data has the correct size for the signature
+        if response_data.len() != SIG_SIZE {
+            return Err(format!(
+                "Invalid signature size: expected {}, got {}",
+                SIG_SIZE,
+                response_data.len()
+            ));
+        }
+
+        trace!(
+            "Received response data: {:?}",
+            base64::encode_block(&response_data)
+        );
+
+        trace!("Verifying response");
         let public_key = include_str!("../public_key.pem");
         let pkey = PKey::public_key_from_pem(public_key.as_bytes()).unwrap();
         let mut verifier = Verifier::new_without_digest(&pkey).unwrap();
 
-        if let Ok(true) = verifier.verify_oneshot(&response_data, &response_data) {
+        if let Ok(true) = verifier.verify_oneshot(&random_data, &response_data) {
             self.checked = true;
             self.result = Some(self.url.clone());
             self.last_checked = Some(
@@ -115,17 +140,29 @@ impl Host {
         }
     }
 
-    fn perform_request(&self, easy: &mut Easy) -> Result<Vec<u8>, String> {
+    fn perform_request(&self, easy: &mut Easy, data: &[u8]) -> Result<Vec<u8>, String> {
         let mut response_data = Vec::new();
         {
+            easy.post(true).unwrap();
+            easy.post_field_size(data.len() as u64).unwrap();
+
             let mut transfer = easy.transfer();
+            transfer
+                .read_function(|buf| {
+                    let len = data.len().min(buf.len());
+                    buf[..len].copy_from_slice(&data[..len]);
+                    Ok(len)
+                })
+                .unwrap();
+
             transfer
                 .write_function(|data| {
                     response_data.extend_from_slice(data);
                     Ok(data.len())
                 })
                 .unwrap();
-            trace!("Performing request to {}", self.url);
+
+            trace!("Performing POST request to {}", self.url);
             if let Err(err) = transfer.perform() {
                 warn!("Failed to perform request to {}: {}", self.url, err);
                 return Err("Failed to verify host".to_string());
