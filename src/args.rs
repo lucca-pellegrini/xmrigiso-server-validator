@@ -30,7 +30,7 @@ const DEFAULT_QUEUE_SIZE: usize = 0x10000 / std::mem::size_of::<*const Host>(); 
 
 pub static ARGS: Lazy<Args> = Lazy::new(|| Args::parse());
 
-/// Client to verify XMRIGISO server signatures using Ed25519
+/// Client to verify XMRigISO server signatures using Ed25519
 #[derive(Parser, Debug)]
 #[command(version, about)]
 pub struct Args {
