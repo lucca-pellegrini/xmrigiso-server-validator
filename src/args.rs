@@ -23,6 +23,7 @@ use once_cell::sync::Lazy;
 
 const DEFAULT_I2P_PROXY: &str = "127.0.0.1:4447";
 const DEFAULT_TOR_PROXY: &str = "127.0.0.1:9050";
+const DEFAULT_PUBLIC_KEY: &str = include_str!("../public_key.pem");
 const DEFAULT_DATA_SIZE: usize = 128;
 const DEFAULT_SIGNATURE_SIZE: usize = 64;
 const DEFAULT_QUEUE_SIZE: usize = 0x10000 / std::mem::size_of::<*const Host>(); // About 64KiB
@@ -37,6 +38,10 @@ pub struct Args {
     #[arg(short, long)]
     pub file: Option<Vec<String>>,
 
+    /// Public key file
+    #[arg(short, long, default_value = DEFAULT_PUBLIC_KEY, hide_default_value = true, help = "Public key file [default: (built-in)]")]
+    pub key: String,
+
     /// I2P proxy hostname and port
     #[arg(long, default_value = DEFAULT_I2P_PROXY)]
     pub i2p_proxy: String,
@@ -45,10 +50,6 @@ pub struct Args {
     #[arg(long, default_value = DEFAULT_TOR_PROXY)]
     pub tor_proxy: String,
 
-    /// Host queue size
-    #[arg(short, long, default_value_t = DEFAULT_QUEUE_SIZE)]
-    pub queue_size: usize,
-
     /// Number of bytes to be signed
     #[arg(short, long, default_value_t = DEFAULT_DATA_SIZE)]
     pub data_size: usize,
@@ -56,6 +57,10 @@ pub struct Args {
     /// Expected Ed25519 signature size
     #[arg(short, long, default_value_t = DEFAULT_SIGNATURE_SIZE)]
     pub sig_size: usize,
+
+    /// Host queue size
+    #[arg(short, long, default_value_t = DEFAULT_QUEUE_SIZE)]
+    pub queue_size: usize,
 
     /// Enable debug logging
     #[arg(short = 'D', long)]

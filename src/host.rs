@@ -123,7 +123,7 @@ impl Host {
         );
 
         trace!("Verifying response");
-        let public_key = include_str!("../public_key.pem");
+        let public_key = &ARGS.key;
         let pkey = PKey::public_key_from_pem(public_key.as_bytes()).unwrap();
         let mut verifier = Verifier::new_without_digest(&pkey).unwrap();
 
