@@ -1,5 +1,8 @@
 [package]
 name = "xmrigiso-server-validator"
+description = "Verify XMRIGISO server signatures using Ed25519"
+authors = ["2025 Lucca Pellegrini <lucca@verticordia.com>"]
+license = "Apache-2.0"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +10,7 @@ edition = "2021"
 clap = { version = "4.0.0", features = ["derive"] }
 clap_complete = "4.0.0"
 curl = "0.4"
+license = "3.6"
 log = "0.4"
 env_logger = "0.9"
 openssl = "0.10"

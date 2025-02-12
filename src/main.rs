@@ -24,6 +24,7 @@ use args::Args;
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use host::Host;
+use license::License;
 use log::{debug, error, info, trace, LevelFilter};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -49,21 +50,33 @@ fn main() {
         generate(
             shell,
             &mut app,
-            "xmrigiso-server-validator",
+            env!("CARGO_PKG_NAME"),
             &mut std::io::stdout(),
         );
         return;
     }
 
+    let license: &dyn License = env!("CARGO_PKG_LICENSE").parse().unwrap();
+
     if args.copyright {
-        println!("xmrigiso-server-validator — Verify server signatures using Ed25519");
-        println!("Version: {}", env!("CARGO_PKG_VERSION"));
-        println!(include_str!("misc/LICENSE-boilerplate"));
+        println!(
+            "{} ({}) — {}",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_DESCRIPTION")
+        );
+        println!(
+            "{}",
+            license.header().unwrap().replace(
+                "[yyyy] [name of copyright owner]",
+                env!("CARGO_PKG_AUTHORS")
+            )
+        );
         std::process::exit(0);
     }
 
     if args.license {
-        println!(include_str!("../LICENSE"));
+        println!("{}", license.text());
         std::process::exit(0);
     }
 
