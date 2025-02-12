@@ -45,11 +45,11 @@ pub struct Args {
     pub queue_size: usize,
 
     /// Enable debug logging
-    #[arg(short, long)]
+    #[arg(short = 'D', long)]
     pub debug: bool,
 
     /// Enable detailed trace logging
-    #[arg(short, long)]
+    #[arg(short = 'x', long)]
     pub trace: bool,
 
     /// Print copyright information
