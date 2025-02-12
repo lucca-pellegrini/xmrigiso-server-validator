@@ -130,8 +130,9 @@ async fn process_files(files: Vec<String>, queue_size: usize) -> Result<String, 
         while let Some((host, proxy)) = rx.recv().await {
             trace!("Consuming host: {}, proxy: {:?}", host, proxy);
             let mut host = Host::new(&host, proxy.as_deref());
-            if host.check().await.is_ok() {
-                return Ok(host.url);
+            match host.check().await {
+                Ok(_) => return Ok(host.url),
+                Err(err) => info!("Host {} failed check: {}", host.url, err),
             }
         }
         Err("No valid host found".to_string())
@@ -172,7 +173,13 @@ async fn process_files(files: Vec<String>, queue_size: usize) -> Result<String, 
 async fn process_host(host: &str, proxy: Option<&str>) -> Result<String, String> {
     trace!("Processing host: {}, with proxy: {:?}", host, proxy);
     let mut host = Host::new(host, proxy);
-    host.check().await?;
+    match host.check().await {
+        Ok(_) => (),
+        Err(err) => {
+            info!("Host {} failed check: {}", host.url, err);
+            return Err(err);
+        }
+    }
     Ok(host.url)
 }
 

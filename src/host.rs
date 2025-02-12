@@ -90,12 +90,19 @@ impl Host {
 
         let mut random_data = vec![0u8; ARGS.data_size];
         rand_bytes(&mut random_data).unwrap();
-        trace!(
+        debug!(
             "Generated random bytes: {:?}",
             base64::encode_block(&random_data)
         );
 
-        let response_data = self.perform_request(&mut easy, &random_data)?;
+        let response_data = match self.perform_request(&mut easy, &random_data) {
+            Ok(data) => data,
+            Err(err) => {
+                warn!("Failed to perform request for host {}: {}", self.url, err);
+                return Err("Failed to perform request".to_string());
+            }
+        };
+
         match easy.response_code() {
             Ok(code) => self.validate_response_code(code)?,
             Err(err) => return Err(format!("Failed to get response code: {}", err)),
@@ -110,7 +117,7 @@ impl Host {
             ));
         }
 
-        trace!(
+        debug!(
             "Received response data: {:?}",
             base64::encode_block(&response_data)
         );
@@ -161,8 +168,7 @@ impl Host {
 
             trace!("Performing POST request to {}", self.url);
             if let Err(err) = transfer.perform() {
-                warn!("Failed to perform request to {}: {}", self.url, err);
-                return Err("Failed to verify host".to_string());
+                return Err(err.to_string());
             }
         } // End of transfer scope
         Ok(response_data)
@@ -172,20 +178,12 @@ impl Host {
         trace!("Received response code: {}", response_code);
         match response_code {
             300..=399 => {
-                debug!(
-                    "Request to {} was redirected with response code: {}",
-                    self.url, response_code
-                );
                 return Err(format!(
                     "Request was redirected with response code: {}",
                     response_code
                 ));
             }
             400..=599 => {
-                debug!(
-                    "Request to {} returned error code: {}",
-                    self.url, response_code
-                );
                 return Err(format!("Request returned error code: {}", response_code));
             }
             _ => {
