@@ -19,10 +19,15 @@
 
 use crate::Host;
 use clap::Parser;
+use once_cell::sync::Lazy;
 
-pub const DEFAULT_I2P_PROXY: &str = "127.0.0.1:4447";
-pub const DEFAULT_TOR_PROXY: &str = "127.0.0.1:9050";
-pub const DEFAULT_QUEUE_SIZE: usize = 0x10000 / std::mem::size_of::<*const Host>(); // About 64KiB
+const DEFAULT_I2P_PROXY: &str = "127.0.0.1:4447";
+const DEFAULT_TOR_PROXY: &str = "127.0.0.1:9050";
+const DEFAULT_DATA_SIZE: usize = 128;
+const DEFAULT_SIGNATURE_SIZE: usize = 64;
+const DEFAULT_QUEUE_SIZE: usize = 0x10000 / std::mem::size_of::<*const Host>(); // About 64KiB
+
+pub static ARGS: Lazy<Args> = Lazy::new(|| Args::parse());
 
 /// Client to verify XMRIGISO server signatures using Ed25519
 #[derive(Parser, Debug)]
@@ -43,6 +48,14 @@ pub struct Args {
     /// Host queue size
     #[arg(short, long, default_value_t = DEFAULT_QUEUE_SIZE)]
     pub queue_size: usize,
+
+    /// Number of bytes to be signed
+    #[arg(short, long, default_value_t = DEFAULT_DATA_SIZE)]
+    pub data_size: usize,
+
+    /// Expected Ed25519 signature size
+    #[arg(short, long, default_value_t = DEFAULT_SIGNATURE_SIZE)]
+    pub sig_size: usize,
 
     /// Enable debug logging
     #[arg(short = 'D', long)]

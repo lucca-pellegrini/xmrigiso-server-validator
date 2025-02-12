@@ -20,8 +20,9 @@
 mod args;
 mod host;
 
+use crate::args::ARGS;
 use args::Args;
-use clap::{CommandFactory, Parser};
+use clap::CommandFactory;
 use clap_complete::{generate, Shell};
 use host::Host;
 use license::License;
@@ -31,10 +32,9 @@ use std::io::{BufRead, BufReader};
 use tokio::{runtime::Runtime, sync::mpsc, task};
 
 fn main() {
-    let args = Args::parse();
-    debug!("Parsed arguments: {:?}", args);
+    debug!("Parsed arguments: {:?}", ARGS);
 
-    if let Some(shell) = args.completion {
+    if let Some(shell) = &ARGS.completion {
         let mut app = Args::command();
         let shell = match shell.as_str() {
             "bash" => Shell::Bash,
@@ -58,7 +58,7 @@ fn main() {
 
     let license: &dyn License = env!("CARGO_PKG_LICENSE").parse().unwrap();
 
-    if args.copyright {
+    if ARGS.copyright {
         println!(
             "{} ({}) — {}",
             env!("CARGO_PKG_NAME"),
@@ -75,16 +75,16 @@ fn main() {
         std::process::exit(0);
     }
 
-    if args.license {
+    if ARGS.license {
         println!("{}", license.text());
         std::process::exit(0);
     }
 
-    if args.trace {
+    if ARGS.trace {
         env_logger::Builder::new()
             .filter(None, LevelFilter::Trace)
             .init();
-    } else if args.debug {
+    } else if ARGS.debug {
         env_logger::Builder::new()
             .filter(None, LevelFilter::Debug)
             .init();
@@ -97,10 +97,10 @@ fn main() {
     let rt = Runtime::new().unwrap();
     trace!("Created Tokio runtime");
     let result = rt.block_on(async {
-        if let Some(files) = args.file {
-            process_files(files, args.queue_size).await
-        } else if let Some(host) = args.host {
-            process_host(&host, args.proxy.as_deref()).await
+        if let Some(files) = &ARGS.file {
+            process_files(files.to_vec(), ARGS.queue_size).await
+        } else if let Some(host) = &ARGS.host {
+            process_host(&host, ARGS.proxy.as_deref()).await
         } else {
             Err("No host or file provided. Use --help for more information.".to_string())
         }

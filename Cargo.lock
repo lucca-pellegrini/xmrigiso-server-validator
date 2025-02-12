@@ -832,6 +832,7 @@ dependencies = [
  "env_logger",
  "license",
  "log",
+ "once_cell",
  "openssl",
  "socks",
  "tokio",

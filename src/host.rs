@@ -17,16 +17,13 @@
  * limitations under the License.
  */
 
-use crate::args::{DEFAULT_I2P_PROXY, DEFAULT_TOR_PROXY};
+use crate::args::ARGS;
 use curl::easy::Easy;
 use log::{debug, info, trace, warn};
 use openssl::rand::rand_bytes;
 use openssl::sign::Verifier;
 use openssl::{base64, pkey::PKey};
 use std::time::{SystemTime, UNIX_EPOCH};
-
-const DATA_SIZE: usize = 128; // Size of data to be signed
-const SIG_SIZE: usize = 64; // Ed25519 signature size
 
 pub struct Host {
     pub url: String,
@@ -54,15 +51,15 @@ impl Host {
         } else if host.ends_with(".onion") {
             debug!(
                 "Default TOR proxy {} chosen for domain {}",
-                DEFAULT_TOR_PROXY, url
+                ARGS.tor_proxy, url
             );
-            Some(DEFAULT_TOR_PROXY.to_string())
+            Some(ARGS.tor_proxy.to_string())
         } else if host.ends_with(".i2p") {
             debug!(
                 "Default I2P proxy {} chosen for domain {}",
-                DEFAULT_I2P_PROXY, url
+                ARGS.i2p_proxy, url
             );
-            Some(DEFAULT_I2P_PROXY.to_string())
+            Some(ARGS.i2p_proxy.to_string())
         } else {
             None
         };
@@ -91,7 +88,7 @@ impl Host {
                 .unwrap();
         }
 
-        let mut random_data = vec![0u8; DATA_SIZE];
+        let mut random_data = vec![0u8; ARGS.data_size];
         rand_bytes(&mut random_data).unwrap();
         trace!(
             "Generated random bytes: {:?}",
@@ -105,10 +102,10 @@ impl Host {
         }
 
         // Check if the response data has the correct size for the signature
-        if response_data.len() != SIG_SIZE {
+        if response_data.len() != ARGS.sig_size {
             return Err(format!(
                 "Invalid signature size: expected {}, got {}",
-                SIG_SIZE,
+                ARGS.sig_size,
                 response_data.len()
             ));
         }
