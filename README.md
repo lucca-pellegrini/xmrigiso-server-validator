@@ -54,11 +54,14 @@ cargo run -- --help
 
 Simply include the compiled executable
 (`target/release/xmrigiso-server-validator`) in the `airootfs/etc/skel/`
-directory of the XMRigISO repository and rebuild the image:
+directory of the XMRigISO repository, optionally compressing it with
+[`upx`](https://upx.github.io/), and rebuild the image:
 
 ```sh
 cd /path/to/xmrigiso
 sudo rm -r out work
+cp /path/to/xmrigiso-server-validator/target/release/xmrigiso-server-validator airootfs/etc/skel/
+upx --best --lzma airootfs/etc/skel/xmrigiso-server-validator # Optional
 sudo mkarchiso -v .
 ```
 
