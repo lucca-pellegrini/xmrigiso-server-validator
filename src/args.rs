@@ -19,14 +19,18 @@
 
 use crate::Host;
 use clap::Parser;
+use include_flate::flate;
 use once_cell::sync::Lazy;
 
+// Default settings
 const DEFAULT_I2P_PROXY: &str = "127.0.0.1:4447";
 const DEFAULT_TOR_PROXY: &str = "127.0.0.1:9050";
-const DEFAULT_PUBLIC_KEY: &str = include_str!("../public_key.pem");
 const DEFAULT_DATA_SIZE: usize = 128;
 const DEFAULT_SIGNATURE_SIZE: usize = 64;
 const DEFAULT_QUEUE_SIZE: usize = 0x10000 / std::mem::size_of::<*const Host>(); // About 64KiB
+
+// Default built-in public key file, slightly obfuscated
+flate!(static DEFAULT_PUBLIC_KEY: str from "public_key.pem");
 
 pub static ARGS: Lazy<Args> = Lazy::new(|| Args::parse());
 
@@ -39,7 +43,7 @@ pub struct Args {
     pub file: Option<Vec<String>>,
 
     /// Public key file
-    #[arg(short, long, default_value = DEFAULT_PUBLIC_KEY, hide_default_value = true, help = "Public key file [default: (built-in)]")]
+    #[arg(short, long, default_value = DEFAULT_PUBLIC_KEY.as_str(), hide_default_value = true, help = "Public key file [default: (built-in)]")]
     pub key: String,
 
     /// I2P proxy hostname and port
