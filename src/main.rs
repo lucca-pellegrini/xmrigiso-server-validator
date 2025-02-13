@@ -32,8 +32,6 @@ use std::io::{BufRead, BufReader};
 use tokio::{runtime::Runtime, sync::mpsc, task};
 
 fn main() {
-    debug!("Parsed arguments: {:?}", ARGS);
-
     if let Some(shell) = &ARGS.completion {
         let mut app = Args::command();
         let shell = match shell.as_str() {
